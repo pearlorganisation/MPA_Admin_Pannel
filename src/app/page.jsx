@@ -8,12 +8,22 @@ export default function Home() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
 
-    if (token) {
-      router.push("/dashboard");
-    } else {
+    if (!token || !user) {
+      router.push("/login");
+      return;
+    }
+    if (user.role === "admin") {
+      router.push("/admin/dashboard");
+    } 
+    else if (user.role === "editor") {
+      router.push("/editor/dashboard");
+    } 
+    else {
       router.push("/login");
     }
+
   }, []);
 
   return null;

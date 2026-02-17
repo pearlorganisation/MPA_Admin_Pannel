@@ -17,9 +17,10 @@ export const RECENT_SUBMISSIONS = [
 ];
 
 export const SIDEBAR_LINKS = [
-  { name: "Overview", href: "/dashboard", icon: "LayoutDashboard" },
-  { name: "User Management", href: "/dashboard/users", icon: "Users" },
-  { name: "Journal Settings", href: "/dashboard/journals", icon: "BookOpen" },
-  { name: "Submissions", href: "/dashboard/submissions", icon: "FileText" },
-  { name: "Board Management", href: "/dashboard/boards", icon: "ShieldCheck" },
+  { name: "Overview", href: "/admin/dashboard", icon: "LayoutDashboard" },
+  { name: "User Management", href: "/admin/dashboard/users", icon: "Users" },
+  { name: "Journal Settings", href: "/admin/dashboard/journals", icon: "BookOpen" },
+  { name: "Submissions", href: "/admin/dashboard/submissions", icon: "FileText" },
+  { name: "Board Management", href: "/admin/dashboard/boards", icon: "ShieldCheck" },
+  { name:"Activity Center", href: "/admin/dashboard/activity", icon:"Bell"},
 ];
