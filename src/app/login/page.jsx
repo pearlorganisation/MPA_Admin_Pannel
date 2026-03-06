@@ -33,7 +33,7 @@ export default function Login() {
         } else if (res.user.role === "editor") {
           router.push("/editor/dashboard");
         } else {
-          router.push("/hello");
+          router.push("/");
         }
       }, 1000);
     } catch (err) {

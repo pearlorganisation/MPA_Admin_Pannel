@@ -22,5 +22,14 @@ export const SIDEBAR_LINKS = [
   { name: "Journal Settings", href: "/admin/dashboard/journals", icon: "BookOpen" },
   { name: "Submissions", href: "/admin/dashboard/submissions", icon: "FileText" },
   { name: "Board Management", href: "/admin/dashboard/boards", icon: "ShieldCheck" },
-  { name:"Activity Center", href: "/admin/dashboard/activity", icon:"Bell"},
+  { name: "Activity Center", href: "/admin/dashboard/activity", icon: "Bell" },
+];
+export const EDITOR_SIDEBAR_LINKS = [
+  { name: "Editorial Dashboard", href: "/editor/dashboard", icon: "LayoutDashboard" },
+  { name: "Assigned Manuscripts", href: "/editor/dashboard/assignments", icon: "Files" },
+  { name: "Reviewer Management", href: "/editor/dashboard/reviewers", icon: "Users" },
+  { name: "Peer Review Tracking", href: "/editor/dashboard/reviews", icon: "ClipboardCheck" },
+  { name: "Activity & Notifications", href: "/editor/dashboard/activity", icon: "BellRing" },
+  { name: "Messages / Communication", href: "/editor/dashboard/messages", icon: "Mail" },
+
 ];

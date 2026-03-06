@@ -46,6 +46,13 @@ export const manuscriptApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ["Manuscripts"],
         }),
+        getAssignedToEditor: builder.query({
+            query: (data) => ({
+                url: "/manuscripts/editor/assignments",
+                method: "GET",
+            }),
+            providesTags: ["Manuscripts"],
+        })
     }),
 });
 
@@ -56,4 +63,5 @@ export const {
     useAssignEditorMutation,
     useUpdateStatusMutation,
     useAssignReviewersMutation,
+    useGetAssignedToEditorQuery, 
 } = manuscriptApi;
