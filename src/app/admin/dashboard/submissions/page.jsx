@@ -1,16 +1,16 @@
 "use client";
 import React, { useState } from "react";
-import { 
-  useGetAllSubmissionsQuery, 
-  useUpdateStatusMutation, 
+import {
+  useGetAllSubmissionsQuery,
+  useUpdateStatusMutation,
   useAssignEditorMutation,
-  useAssignReviewersMutation 
+  useAssignReviewersMutation
 } from "../../../../services/manuscriptApi";
 import { useGetAllEditorsQuery, useGetAllReviewersQuery } from "../../../../services/userApi";
-import { 
-  FileText, UserCheck, Users, XCircle, 
+import {
+  FileText, UserCheck, Users, XCircle,
   ChevronLeft, ChevronRight, ExternalLink,
-  MoreHorizontal, Loader2, MessageSquare, AlertCircle
+  MoreHorizontal, Loader2, MessageSquare, AlertCircle, Edit
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -47,10 +47,10 @@ const AllSubmissions = () => {
   const handleReject = async () => {
     if (!feedback) return toast.error("Please provide rejection feedback");
     try {
-      await updateStatus({ 
-        manuscriptId: selectedManuscript._id, 
-        status: "Rejected", 
-        feedback 
+      await updateStatus({
+        manuscriptId: selectedManuscript._id,
+        status: "Rejected",
+        feedback
       }).unwrap();
       toast.success("Manuscript Rejected");
       closeModal();
@@ -59,12 +59,27 @@ const AllSubmissions = () => {
     }
   };
 
+  const handleRequestRevision = async () => {
+    if (!feedback) return toast.error("Please provide revision feedback");
+    try {
+      await updateStatus({
+        manuscriptId: selectedManuscript._id,
+        status: "Revision Required",
+        feedback
+      }).unwrap();
+      toast.success("Revision Request Sent to Author");
+      closeModal();
+    } catch (err) {
+      toast.error(err?.data?.message || "Failed to request revision");
+    }
+  };
+
   const handleAssignEditor = async () => {
     if (!selectedEditor) return toast.error("Please select an editor");
     try {
-      await assignEditor({ 
-        manuscriptId: selectedManuscript._id, 
-        editorId: selectedEditor 
+      await assignEditor({
+        manuscriptId: selectedManuscript._id,
+        editorId: selectedEditor
       }).unwrap();
       toast.success("Editor Assigned successfully");
       closeModal();
@@ -76,9 +91,9 @@ const AllSubmissions = () => {
   const handleAssignReviewers = async () => {
     if (selectedReviewers.length !== 2) return toast.error("Please select exactly 2 reviewers");
     try {
-      await assignReviewers({ 
-        manuscriptId: selectedManuscript._id, 
-        reviewerIds: selectedReviewers 
+      await assignReviewers({
+        manuscriptId: selectedManuscript._id,
+        reviewerIds: selectedReviewers
       }).unwrap();
       toast.success("Reviewers Assigned successfully");
       closeModal();
@@ -92,6 +107,7 @@ const AllSubmissions = () => {
       "Submitted": "bg-blue-50 text-blue-700 border-blue-100",
       "Editor Assigned": "bg-indigo-50 text-indigo-700 border-indigo-100",
       "Under Review": "bg-amber-50 text-amber-700 border-amber-100",
+      "Revision Required": "bg-orange-50 text-orange-700 border-orange-100", // <-- NAYA
       "Accepted": "bg-emerald-50 text-emerald-700 border-emerald-100",
       "Rejected": "bg-rose-50 text-rose-700 border-rose-100",
     };
@@ -172,35 +188,25 @@ const AllSubmissions = () => {
                       </div>
                     </td>
                     <td className="p-5">
-                      <div className="flex justify-center items-center gap-2">
-                        <button 
-                          onClick={() => { setSelectedManuscript(item); setModalType('editor'); }}
-                          className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
-                          title="Assign Editor"
-                        >
-                          <UserCheck size={18} />
-                        </button>
-                        <button 
-                          onClick={() => { setSelectedManuscript(item); setModalType('reviewer'); }}
-                          className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
-                          title="Assign Reviewers"
-                        >
-                          <Users size={18} />
-                        </button>
-                        <button 
-                          onClick={() => { setSelectedManuscript(item); setModalType('reject'); }}
-                          className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                          title="Reject Submission"
-                        >
-                          <XCircle size={18} />
-                        </button>
-                        <a 
-                          href={item.files.manuscriptFile} 
-                          target="_blank" 
-                          className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
-                        >
-                          <ExternalLink size={18} />
-                        </a>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex justify-center items-center gap-2">
+                          <button onClick={() => { setSelectedManuscript(item); setModalType('editor'); }} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors" title="Assign Editor"><UserCheck size={18} /></button>
+                          <button onClick={() => { setSelectedManuscript(item); setModalType('reviewer'); }} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors" title="Assign Reviewers"><Users size={18} /></button>
+
+                          {/* Request Revision */}
+                          <button onClick={() => { setSelectedManuscript(item); setModalType('revise'); }} className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors" title="Request Revision">
+                            <Edit size={18} />
+                          </button>
+
+                          <button onClick={() => { setSelectedManuscript(item); setModalType('reject'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors" title="Reject Submission"><XCircle size={18} /></button>
+                          <a href={item.files.manuscriptFile} target="_blank" className="p-2 text-gray-400 hover:text-gray-900 transition-colors"><ExternalLink size={18} /></a>
+                        </div>
+
+                        {item.isRevised && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Author Revised
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -258,7 +264,7 @@ const AllSubmissions = () => {
               {modalType === 'editor' && (
                 <div className="space-y-4">
                   <label className="block text-xs font-bold text-gray-400 uppercase">Select Editor</label>
-                  <select 
+                  <select
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                     value={selectedEditor}
                     onChange={(e) => setSelectedEditor(e.target.value)}
@@ -266,7 +272,7 @@ const AllSubmissions = () => {
                     <option value="">Choose an editor...</option>
                     {editors?.data?.map(ed => <option key={ed._id} value={ed._id}>{ed.name} ({ed.email})</option>)}
                   </select>
-                  <button 
+                  <button
                     onClick={handleAssignEditor}
                     disabled={isAssigningEditor}
                     className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex justify-center"
@@ -284,7 +290,7 @@ const AllSubmissions = () => {
                     {reviewers?.data?.map(rev => (
                       <label key={rev._id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedReviewers.includes(rev._id) ? 'bg-emerald-50 border-emerald-500 shadow-sm' : 'bg-gray-50 border-gray-200'}`}>
                         <div className="flex items-center gap-3">
-                          <input 
+                          <input
                             type="checkbox"
                             className="w-4 h-4 text-emerald-600 rounded"
                             checked={selectedReviewers.includes(rev._id)}
@@ -306,7 +312,7 @@ const AllSubmissions = () => {
                     ))}
                   </div>
                   <div className="pt-4">
-                     <button 
+                    <button
                       onClick={handleAssignReviewers}
                       disabled={isAssigningReviewer || selectedReviewers.length !== 2}
                       className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:bg-gray-300 transition-all shadow-lg shadow-emerald-200 flex justify-center"
@@ -321,18 +327,41 @@ const AllSubmissions = () => {
               {modalType === 'reject' && (
                 <div className="space-y-4">
                   <label className="block text-xs font-bold text-gray-400 uppercase">Reason for Rejection</label>
-                  <textarea 
+                  <textarea
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-rose-500 outline-none transition-all text-sm min-h-[120px]"
                     placeholder="Enter professional feedback for the author..."
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                   />
-                  <button 
+                  <button
                     onClick={handleReject}
                     disabled={isStatusUpdating}
                     className="w-full py-3 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 flex justify-center"
                   >
                     {isStatusUpdating ? <Loader2 className="animate-spin" /> : "Confirm Rejection"}
+                  </button>
+                </div>
+              )}
+
+              {/* Request Revision Modal */}
+              {modalType === 'revise' && (
+                <div className="space-y-4">
+                  <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 mb-2">
+                    <p className="text-xs text-orange-800 font-medium">An email with a secure link will be sent to the author to fix these issues.</p>
+                  </div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase">What needs to be fixed?</label>
+                  <textarea
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 outline-none transition-all text-sm min-h-[120px]"
+                    placeholder="e.g., Cover letter is missing, table formatting is incorrect..."
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                  />
+                  <button
+                    onClick={handleRequestRevision}
+                    disabled={isStatusUpdating}
+                    className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-200 flex justify-center"
+                  >
+                    {isStatusUpdating ? <Loader2 className="animate-spin" /> : "Send Revision Request"}
                   </button>
                 </div>
               )}
