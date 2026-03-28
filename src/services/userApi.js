@@ -12,11 +12,11 @@ export const userApi = baseApi.injectEndpoints({
       providesTags: ["User"],
     }),
     getAllEditors: builder.query({
-      query:()=> "/users/editors",
+      query: () => "/users/editors",
       providesTags: ["User"],
     }),
     getAllReviewers: builder.query({
-      query:()=> "/users/reviewers",
+      query: () => "/users/reviewers",
       providesTags: ["User"],
     }),
     createUser: builder.mutation({
@@ -42,6 +42,13 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
+    deleteUser: builder.mutation({
+      query: (id) => ({
+        url: `/users/delete/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["User"],
+    }),
   }),
 });
 
@@ -53,4 +60,5 @@ export const {
   useToggleBlockMutation,
   useGetAllEditorsQuery,
   useGetAllReviewersQuery,
+  useDeleteUserMutation
 } = userApi;

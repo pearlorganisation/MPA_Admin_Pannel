@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   useGetAllUsersQuery,
   useCreateUserMutation,
   useAssignRoleMutation,
-  useToggleBlockMutation
+  useToggleBlockMutation,
+  useDeleteUserMutation // Added delete mutation
 } from "../../../../services/userApi";
 import {
   UserPlus,
@@ -17,44 +18,46 @@ import {
   AlertTriangle,
   RefreshCw,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Trash2 // Added Trash icon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
   // --- API Hooks ---
-  const { data, isLoading, error } = useGetAllUsersQuery();
+  const { data, isLoading } = useGetAllUsersQuery();
   const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
   const [toggleBlock, { isLoading: isBlocking }] = useToggleBlockMutation();
   const [assignRole, { isLoading: isRoleUpdating }] = useAssignRoleMutation();
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
 
   // --- Local States ---
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'editor' });
 
-  // Confirmation Modal State
+  // Combined Modal State for Block, Unblock, Role change, and Delete
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
-    type: '', // 'block', 'unblock', 'role'
+    type: '', // 'block', 'unblock', 'role', 'delete'
     user: null,
     pendingRole: ''
   });
 
-  // --- Optimized Filtering ---
+  // --- Search and Filter Logic ---
   const filteredUsers = useMemo(() => {
     if (!data?.user) return [];
-
     return data.user
       .filter(user => user.role !== "researcher")
       .filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
-
   }, [data, searchTerm]);
 
-  // --- Handlers ---
+  // --- Action Handlers ---
+
+  // Create new staff member
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
@@ -67,6 +70,7 @@ const UserManagement = () => {
     }
   };
 
+  // Change user role (Editor/Reviewer)
   const executeRoleChange = async () => {
     const { user, pendingRole } = confirmModal;
     try {
@@ -78,6 +82,7 @@ const UserManagement = () => {
     }
   };
 
+  // Block or Unblock a user
   const executeToggleBlock = async () => {
     const { user } = confirmModal;
     try {
@@ -89,15 +94,29 @@ const UserManagement = () => {
     }
   };
 
+  // Permanently delete a user
+  const executeDeleteUser = async () => {
+    const { user } = confirmModal;
+    try {
+      await deleteUser(user._id).unwrap();
+      toast.success("User deleted successfully");
+      closeConfirmModal();
+    } catch (err) {
+      toast.error("Failed to delete user");
+    }
+  };
+
+  // Helper to open confirmation modal
   const openConfirmModal = (type, user, pendingRole = '') => {
     setConfirmModal({ isOpen: true, type, user, pendingRole });
   };
 
+  // Helper to close confirmation modal
   const closeConfirmModal = () => {
     setConfirmModal({ isOpen: false, type: '', user: null, pendingRole: '' });
   };
 
-  // --- UI Helpers ---
+  // Badge styling based on role
   const getRoleBadge = (role) => {
     const styles = {
       masterAdmin: "bg-purple-50 text-purple-700 border-purple-200",
@@ -105,63 +124,65 @@ const UserManagement = () => {
       reviewer: "bg-amber-50 text-amber-700 border-amber-200",
       researcher: "bg-emerald-50 text-emerald-700 border-emerald-200",
     };
-    return `px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${styles[role] || styles.editor}`;
+    return `px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${styles[role] || styles.editor}`;
   };
 
+  // Loading state UI
   if (isLoading) return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50">
       <Loader2 className="animate-spin text-indigo-600 w-12 h-12 mb-4" />
-      <p className="text-gray-500 font-medium animate-pulse">Loading workspace...</p>
+      <p className="text-gray-500 font-medium">Loading workspace...</p>
     </div>
   );
 
   return (
-    <div className="p-4 md:p-8 bg-gray-50 min-h-screen font-sans selection:bg-indigo-100">
+    <div className="p-4 md:p-6 bg-gray-50 min-h-screen font-sans">
       <div className="max-w-7xl mx-auto">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        {/* --- Header Section --- */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Staff Management</h1>
-            <p className="text-gray-500 mt-2 text-sm">Control access levels and monitor team activity.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
+            <p className="text-gray-500 text-sm">Manage team access and permissions.</p>
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="group flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl transition-all shadow-xl shadow-indigo-200 active:scale-95"
+            className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-100 active:scale-95"
           >
-            <UserPlus size={18} className="group-hover:rotate-12 transition-transform" />
-            <span className="font-semibold">Add New Staff</span>
+            <UserPlus size={18} />
+            <span className="font-semibold text-sm">Add New Staff</span>
           </button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {/* --- Quick Stats Bar (Compact) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {[
             { label: 'Total Staff', val: data?.user?.length || 0, icon: Shield, color: 'indigo' },
-            { label: 'Active Now', val: data?.user?.filter(u => !u.isBlocked).length, icon: CheckCircle2, color: 'emerald' },
+            { label: 'Active', val: data?.user?.filter(u => !u.isBlocked).length, icon: CheckCircle2, color: 'emerald' },
             { label: 'Restricted', val: data?.user?.filter(u => u.isBlocked).length, icon: UserX, color: 'rose' }
           ].map((stat, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5">
-              <div className={`p-4 bg-${stat.color}-50 text-${stat.color}-600 rounded-2xl`}>
-                <stat.icon size={28} />
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+              <div className={`p-3 bg-${stat.color}-50 text-${stat.color}-600 rounded-xl`}>
+                <stat.icon size={20} />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{stat.label}</p>
-                <p className="text-xl font-black text-gray-900">{stat.val}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
+                <p className="text-lg font-black text-gray-900">{stat.val}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Table Container */}
-        <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-50 flex items-center bg-white">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+        {/* --- Table Section --- */}
+        <div className="bg-white rounded-[1.5rem] shadow-sm border border-gray-100 overflow-hidden">
+          {/* Search bar inside table container */}
+          <div className="p-4 border-b border-gray-50 bg-white">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
                 placeholder="Search staff by name or email..."
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-gray-700 placeholder:text-gray-400"
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
@@ -170,55 +191,69 @@ const UserManagement = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-gray-50/50 text-gray-400 text-[11px] uppercase tracking-[0.15em] font-bold">
-                  <th className="px-8 py-5">User Profile</th>
-                  <th className="px-8 py-5 text-center">Assign Role</th>
-                  <th className="px-8 py-5 text-center">Status Badge</th>
-                  <th className="px-8 py-5 text-right">Operations</th>
+                <tr className="bg-gray-50/50 text-gray-400 text-[10px] uppercase tracking-widest font-bold">
+                  <th className="px-6 py-4">User Profile</th>
+                  <th className="px-6 py-4 text-center">Assign Role</th>
+                  <th className="px-6 py-4 text-center">Status Badge</th>
+                  <th className="px-6 py-4 text-right">Operations</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredUsers.map((user) => (
-                  <tr key={user._id} className="hover:bg-indigo-50/30 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md group-hover:scale-110 transition-transform">
+                  <tr key={user._id} className="hover:bg-gray-50/50 transition-colors group">
+                    <td className="px-6 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
                           {user.name[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-bold text-gray-900 text-base capitalize">{user.name}</p>
-                          <div className="flex items-center text-sm text-gray-400 font-medium">
-                            <Mail size={14} className="mr-1.5" /> {user.email}
+                          <p className="font-bold text-gray-900 text-sm capitalize">{user.name}</p>
+                          <div className="flex items-center text-xs text-gray-400">
+                            <Mail size={12} className="mr-1" /> {user.email}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-center">
+                    <td className="px-6 py-3 text-center">
                       <select
                         value={user.role}
+                        disabled={user.role === 'masterAdmin'}
                         onChange={(e) => openConfirmModal('role', user, e.target.value)}
-                        className="bg-transparent font-bold text-indigo-600 focus:outline-none cursor-pointer border-b-2 border-transparent hover:border-indigo-400 transition-all py-1"
+                        className="bg-transparent font-bold text-indigo-600 text-sm focus:outline-none cursor-pointer hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="editor">Editor</option>
                         <option value="reviewer">Reviewer</option>
                         <option value="researcher">Researcher</option>
-                        {/* <option value="masterAdmin">Admin</option> */}
                       </select>
                     </td>
-                    <td className="px-8 py-5 text-center">
+                    <td className="px-6 py-3 text-center">
                       <span className={getRoleBadge(user.role)}>{user.role}</span>
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <button
-                        onClick={() => openConfirmModal(user.isBlocked ? 'unblock' : 'block', user)}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${user.isBlocked
-                          ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white"
-                          : "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
-                          }`}
-                      >
-                        {user.isBlocked ? <UserCheck size={16} /> : <UserX size={16} />}
-                        {user.isBlocked ? "Activate" : "Restrict"}
-                      </button>
+                    <td className="px-6 py-3 text-right">
+                      <div className="flex justify-end items-center gap-2">
+                        {/* Block/Unblock Button */}
+                        <button
+                          onClick={() => openConfirmModal(user.isBlocked ? 'unblock' : 'block', user)}
+                          className={`p-2 rounded-lg transition-all ${user.isBlocked
+                            ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                            : "bg-amber-50 text-amber-600 hover:bg-amber-100"
+                            }`}
+                          title={user.isBlocked ? "Activate" : "Restrict"}
+                        >
+                          {user.isBlocked ? <UserCheck size={18} /> : <UserX size={18} />}
+                        </button>
+                        
+                        {/* Delete Button (Added) */}
+                        {user.role !== 'masterAdmin' && (
+                          <button
+                            onClick={() => openConfirmModal('delete', user)}
+                            className="p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all"
+                            title="Delete User"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -231,87 +266,96 @@ const UserManagement = () => {
       {/* --- MODAL: CREATE USER --- */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-md transition-opacity" onClick={() => setIsCreateModalOpen(false)} />
-          <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 pb-0 flex justify-between items-center">
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setIsCreateModalOpen(false)} />
+          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 pb-0 flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-black text-gray-900">Add Staff</h2>
-                <p className="text-gray-500 font-medium">Create access credentials</p>
+                <h2 className="text-xl font-black text-gray-900">Add Staff</h2>
+                <p className="text-gray-500 text-xs">Create new system credentials</p>
               </div>
-              <button onClick={() => setIsCreateModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X size={24} className="text-gray-400" />
+              <button onClick={() => setIsCreateModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                <X size={20} className="text-gray-400" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-8 space-y-5">
+            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Full Name</label>
-                <input required type="text" className="w-full px-5 py-3.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-medium" placeholder="Ex: Rahul Sharma" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Full Name</label>
+                <input required type="text" className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none text-sm" placeholder="Ex: Rahul Sharma" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
-                <input required type="email" className="w-full px-5 py-3.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-medium" placeholder="rahul@company.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Email Address</label>
+                <input required type="email" className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none text-sm" placeholder="rahul@company.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Security Password</label>
-                <input required type="password" className="w-full px-5 py-3.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-medium" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Password</label>
+                <input required type="password" minLength={6} className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none text-sm" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Primary Role</label>
-                <select className="w-full px-5 py-3.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-gray-700 appearance-none" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 ml-1">Role</label>
+                <select className="w-full px-4 py-2.5 bg-gray-50 border-2 border-transparent focus:border-indigo-500 rounded-xl outline-none text-sm font-bold text-gray-700" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
                   <option value="editor">Editor</option>
                   <option value="reviewer">Reviewer</option>
                   <option value="researcher">Researcher</option>
-                  {/* <option value="masterAdmin">Master Admin</option> */}
                 </select>
               </div>
 
-              <button disabled={isCreating} type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-70">
-                {isCreating ? <Loader2 className="animate-spin" /> : "Verify & Create User"}
+              <button disabled={isCreating} type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 disabled:opacity-70">
+                {isCreating ? <Loader2 className="animate-spin size={18}" /> : "Create Staff Account"}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* --- MODAL: PROFESSIONAL CONFIRMATION (Block/Role) --- */}
+      {/* --- MODAL: CONFIRMATION (Block/Role/Delete) --- */}
       {confirmModal.isOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onClick={closeConfirmModal} />
-          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-8 text-center">
-              <div className={`mx-auto w-20 h-20 rounded-3xl flex items-center justify-center mb-6 ${confirmModal.type === 'block' ? 'bg-rose-100 text-rose-600' :
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={closeConfirmModal} />
+          <div className="bg-white rounded-[1.5rem] w-full max-w-sm shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${
+                confirmModal.type === 'delete' || confirmModal.type === 'block' ? 'bg-rose-100 text-rose-600' :
                 confirmModal.type === 'unblock' ? 'bg-emerald-100 text-emerald-600' :
-                  'bg-indigo-100 text-indigo-600'
-                }`}>
-                {confirmModal.type === 'block' && <AlertTriangle size={40} />}
-                {confirmModal.type === 'unblock' && <UserCheck size={40} />}
-                {confirmModal.type === 'role' && <RefreshCw size={40} />}
+                'bg-indigo-100 text-indigo-600'
+              }`}>
+                {confirmModal.type === 'block' && <AlertTriangle size={32} />}
+                {confirmModal.type === 'unblock' && <UserCheck size={32} />}
+                {confirmModal.type === 'role' && <RefreshCw size={32} />}
+                {confirmModal.type === 'delete' && <Trash2 size={32} />}
               </div>
 
-              <h3 className="text-xl font-black text-gray-900 mb-2">Are you sure?</h3>
-              <p className="text-gray-500 font-medium leading-relaxed">
-                {confirmModal.type === 'block' && `You are about to restrict access for ${confirmModal.user?.name}. They won't be able to log in.`}
-                {confirmModal.type === 'unblock' && `This will restore full system access for ${confirmModal.user?.name}.`}
-                {confirmModal.type === 'role' && `Change ${confirmModal.user?.name}'s permissions from ${confirmModal.user?.role} to ${confirmModal.pendingRole}?`}
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                {confirmModal.type === 'delete' ? 'Delete User?' : 'Are you sure?'}
+              </h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                {confirmModal.type === 'block' && `Restrict access for ${confirmModal.user?.name}?`}
+                {confirmModal.type === 'unblock' && `Restore access for ${confirmModal.user?.name}?`}
+                {confirmModal.type === 'role' && `Change ${confirmModal.user?.name}'s role to ${confirmModal.pendingRole}?`}
+                {confirmModal.type === 'delete' && `This will permanently remove ${confirmModal.user?.name}. This action cannot be undone.`}
               </p>
 
-              <div className="grid grid-cols-2 gap-3 mt-8">
+              <div className="grid grid-cols-2 gap-3 mt-6">
                 <button
                   onClick={closeConfirmModal}
-                  className="px-6 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold transition-colors"
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-sm transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={confirmModal.type === 'role' ? executeRoleChange : executeToggleBlock}
-                  disabled={isBlocking || isRoleUpdating}
-                  className={`px-6 py-3.5 rounded-2xl font-bold text-white shadow-lg transition-all active:scale-95 flex items-center justify-center ${confirmModal.type === 'block' ? 'bg-rose-600 shadow-rose-200 hover:bg-rose-700' :
-                    confirmModal.type === 'unblock' ? 'bg-emerald-600 shadow-emerald-200 hover:bg-emerald-700' :
-                      'bg-indigo-600 shadow-indigo-200 hover:bg-indigo-700'
-                    }`}
+                  onClick={() => {
+                    if (confirmModal.type === 'role') executeRoleChange();
+                    else if (confirmModal.type === 'delete') executeDeleteUser();
+                    else executeToggleBlock();
+                  }}
+                  disabled={isBlocking || isRoleUpdating || isDeleting}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-white text-sm shadow-md transition-all active:scale-95 flex items-center justify-center ${
+                    confirmModal.type === 'delete' || confirmModal.type === 'block' ? 'bg-rose-600 hover:bg-rose-700' :
+                    confirmModal.type === 'unblock' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                    'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
-                  {(isBlocking || isRoleUpdating) ? <Loader2 className="animate-spin w-5 h-5" /> : "Confirm"}
+                  {(isBlocking || isRoleUpdating || isDeleting) ? <Loader2 className="animate-spin w-4 h-4" /> : "Confirm"}
                 </button>
               </div>
             </div>

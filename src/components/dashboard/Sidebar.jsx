@@ -207,6 +207,14 @@ export default function Sidebar({ role = "admin" }) {
                 <Icons.Globe size={18} className="group-hover:rotate-12 transition-transform" />
                 <span className="font-medium text-sm">Editorial Board</span>
               </Link>
+              <Link
+                href="/admin/dashboard/user-inquiries"
+                onClick={closeSidebar}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border border-transparent hover:bg-blue-500/10 hover:text-blue-400 text-slate-400 group"
+              >
+                <Icons.MessageSquare size={18} className="group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-sm">User Inquiries</span>
+              </Link>
             </div>
           )}
         </nav>

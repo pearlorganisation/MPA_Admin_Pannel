@@ -1,211 +1,220 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { 
-  ArrowRight, 
-  ClipboardList, 
-  Clock, 
-  CheckCircle2, 
-  FileText, 
-  Users, 
-  Settings2,
-  Search,
-  MoreVertical
+  ArrowRight, ClipboardList, Clock, CheckCircle2, 
+  FileText, Users, Settings2, Search, MoreVertical,
+  AlertCircle, BarChart3, PieChart as PieIcon, Loader2
 } from "lucide-react";
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend 
+} from "recharts";
+import { useGetAssignedToEditorQuery } from "../../../services/manuscriptApi"; 
 
-// ==========================================
-// 📌 DUMMY DATA (Added inside the file)
-// ==========================================
-const EDITOR_STATS_DATA =[
-  { label: "New Assignments", value: "12", color: "text-blue-600", icon: "clipboard" },
-  { label: "Awaiting Reviews", value: "34", color: "text-amber-500", icon: "clock" },
-  { label: "Ready for Decision", value: "8", color: "text-emerald-600", icon: "check" },
-  { label: "Total Handled", value: "156", color: "text-slate-800", icon: "file" },
-];
+// --- UI Constants ---
+const COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#94a3b8"];
 
-const EDITOR_SUBMISSIONS =[
-  {
-    id: "MAN-2023-089",
-    title: "Quantum Computing in Modern Cryptography",
-    author: "Dr. Sarah Jenkins",
-    reviewersAssigned: 2,
-    dueDate: "24 Oct, 2023",
-    status: "Awaiting Reviews",
-  },
-  {
-    id: "MAN-2023-091",
-    title: "AI Models for Climate Change Prediction",
-    author: "James Chen",
-    reviewersAssigned: 0,
-    dueDate: "28 Oct, 2023",
-    status: "Needs Reviewer",
-  },
-  {
-    id: "MAN-2023-075",
-    title: "Nanotechnology in Targeted Drug Delivery",
-    author: "Elena Rodriguez",
-    reviewersAssigned: 3,
-    dueDate: "15 Oct, 2023",
-    status: "Ready for Decision",
-  },
-  {
-    id: "MAN-2023-102",
-    title: "Blockchain Applications in Supply Chain",
-    author: "Michael Chang",
-    reviewersAssigned: 1,
-    dueDate: "02 Nov, 2023",
-    status: "Under Review",
-  },
-  {
-    id: "MAN-2023-115",
-    title: "Evolutionary Biology in Deep Sea Ecosystems",
-    author: "Dr. Alan Grant",
-    reviewersAssigned: 2,
-    dueDate: "10 Nov, 2023",
-    status: "Under Review",
-  }
-];
-
-// ==========================================
-// 📌 MAIN COMPONENT
-// ==========================================
 export default function EditorOverview() {
-  
-  // Helper for Stat Icons
-  const getStatIcon = (iconName) => {
-    switch(iconName) {
-      case 'clipboard': return <ClipboardList size={22} className="text-blue-600" />;
-      case 'clock': return <Clock size={22} className="text-amber-500" />;
-      case 'check': return <CheckCircle2 size={22} className="text-emerald-600" />;
-      case 'file': return <FileText size={22} className="text-slate-600" />;
-      default: return <FileText size={22} className="text-slate-400" />;
-    }
-  };
+  // 1. Fetch Real Data from RTK Query
+  const { data, isLoading, isError, refetch } = useGetAssignedToEditorQuery();
+  const manuscripts = data?.manuscripts || [];
+
+  // 2. Process Data for Stats and Charts (useMemo for performance)
+  const stats = useMemo(() => {
+    const total = manuscripts.length;
+    const underReview = manuscripts.filter(m => m.status === "Under Review").length;
+    const needsReviewer = manuscripts.filter(m => m.status === "Editor Assigned").length;
+    const readyForDecision = manuscripts.filter(m => m.status === "Submitted" && m.isRevised).length;
+    const published = manuscripts.filter(m => m.status === "Published").length;
+
+    // Chart Data: Status Distribution
+    const statusCounts = manuscripts.reduce((acc, m) => {
+      acc[m.status] = (acc[m.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const pieData = Object.keys(statusCounts).map(key => ({
+      name: key,
+      value: statusCounts[key]
+    }));
+
+    // Chart Data: Discipline Distribution
+    const disciplineCounts = manuscripts.reduce((acc, m) => {
+      acc[m.discipline] = (acc[m.discipline] || 0) + 1;
+      return acc;
+    }, {});
+
+    const barData = Object.keys(disciplineCounts).map(key => ({
+      name: key.substring(0, 10), // Truncate long names
+      count: disciplineCounts[key]
+    }));
+
+    return { total, underReview, needsReviewer, readyForDecision, published, pieData, barData };
+  }, [manuscripts]);
+
+  if (isLoading) return (
+    <div className="flex h-96 flex-col items-center justify-center gap-4">
+      <Loader2 className="animate-spin text-blue-600" size={40} />
+      <p className="text-slate-500 font-medium">Loading Editorial Desk...</p>
+    </div>
+  );
+
+  if (isError) return (
+    <div className="p-8 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-4 text-rose-700">
+      <AlertCircle />
+      <p>Failed to load assigned manuscripts. Please try again later.</p>
+    </div>
+  );
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="p-4 md:p-8 space-y-10 animate-in fade-in duration-700">
       
-      {/* --- Header Section --- */}
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      {/* --- Header --- */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase">
-              Editor Workspace
+            <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">
+              Editor-in-Chief Pannel
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Editorial Desk</h1>
-          <p className="text-slate-500 mt-2 text-sm md:text-base max-w-2xl">
-            Manage your assigned manuscripts, track reviewer progress, and make final publication decisions.
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Editorial Control</h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-xl">
+            Real-time tracking of <span className="text-blue-600 font-bold">{stats.total} assignments</span>. 
+            Monitor peer-review progress and manage publication workflows.
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50 hover:shadow-sm transition-all">
-            <Search size={16} className="text-slate-400" />
-            Search
+        <div className="flex items-center gap-3">
+          <button onClick={() => refetch()} className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all">
+            <Clock size={18} className="text-slate-600" />
           </button>
-          <button className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 shadow-sm transition-all">
+          <button className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-slate-200 transition-all">
             <Settings2 size={16} />
-            Board Settings
+            Desk Settings
           </button>
         </div>
       </header>
 
-      {/* --- Stats Grid (Premium Look) --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {EDITOR_STATS_DATA.map((stat, idx) => (
-          <div
-            key={idx}
-            className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 group relative overflow-hidden"
-          >
-            {/* Subtle background decoration */}
-            <div className="absolute -right-4 -top-4 bg-slate-50 w-24 h-24 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500 ease-in-out -z-10"></div>
-            
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl group-hover:bg-white transition-colors z-10">
-                {getStatIcon(stat.icon)}
-              </div>
-            </div>
-            <div className="z-10 relative">
-              <h3 className={`text-4xl font-black tracking-tight mb-1 ${stat.color}`}>
-                {stat.value}
-              </h3>
-              <p className="text-sm font-medium text-slate-500">
-                {stat.label}
-              </p>
-            </div>
-          </div>
-        ))}
+      {/* --- Stats Cards --- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard label="Total Assigned" value={stats.total} icon={<FileText />} color="blue" />
+        <StatCard label="Under Review" value={stats.underReview} icon={<Users />} color="amber" />
+        <StatCard label="Awaiting Reviewers" value={stats.needsReviewer} icon={<ClipboardList />} color="rose" />
+        <StatCard label="Ready for Decision" value={stats.readyForDecision} icon={<CheckCircle2 />} color="emerald" />
       </div>
 
-      {/* --- Actionable Table Section --- */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-        
-        {/* Table Header Controls */}
-        <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Manuscripts Needing Attention
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">Showing active submissions assigned to your desk.</p>
+      {/* --- Visual Analytics Section --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Status Distribution Chart */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <PieIcon size={18} className="text-blue-600" />
+            <h3 className="font-bold text-slate-800">Manuscript Status Flow</h3>
           </div>
-          <button className="text-sm text-blue-600 font-bold flex items-center gap-1 hover:text-blue-700 hover:underline">
-            View Complete Desk <ArrowRight size={16} />
-          </button>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={stats.pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {stats.pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36}/>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Table Content */}
+        {/* Discipline Analytics Chart */}
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <BarChart3 size={18} className="text-indigo-600" />
+            <h3 className="font-bold text-slate-800">Submissions by Discipline</h3>
+          </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.barData}>
+                <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
+                <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{fill: '#f8fafc'}} />
+                <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={30} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* --- Main Table Section --- */}
+      <div className="bg-white rounded-3xl border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+          <div>
+            <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Active Manuscripts</h2>
+            <p className="text-xs text-slate-500 font-medium">Direct management of your assigned queue</p>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text" 
+              placeholder="Filter by ID or Title..." 
+              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64 transition-all"
+            />
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-white text-slate-400 text-xs uppercase tracking-wider border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-5 font-bold">Manuscript ID & Title</th>
-                <th className="px-6 py-5 font-bold">Author</th>
-                <th className="px-6 py-5 font-bold text-center">Reviewers</th>
-                <th className="px-6 py-5 font-bold">Target Date</th>
-                <th className="px-6 py-5 font-bold">Status</th>
-                <th className="px-6 py-5 font-bold text-right">Action</th>
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
+                <th className="px-8 py-4">Manuscript Info</th>
+                <th className="px-6 py-4">Discipline</th>
+                <th className="px-6 py-4 text-center">Reviewers</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-8 py-4 text-right">Control</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {EDITOR_SUBMISSIONS.map((paper) => (
-                <tr
-                  key={paper.id}
-                  className="hover:bg-slate-50/80 transition-colors group bg-white"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="text-[11px] font-bold text-slate-400 mb-1 tracking-wider">{paper.id}</span>
-                      <span className="font-bold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors cursor-pointer">
-                        {paper.title}
+            <tbody className="divide-y divide-slate-100">
+              {manuscripts.map((m) => (
+                <tr key={m._id} className="hover:bg-blue-50/30 transition-colors group">
+                  <td className="px-8 py-5">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-black text-blue-600 bg-blue-50 w-max px-2 py-0.5 rounded uppercase tracking-tighter">
+                        {m.manuscriptId}
+                      </span>
+                      <span className="font-bold text-slate-800 line-clamp-1 text-sm group-hover:text-blue-700">
+                        {m.title}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium italic">
+                        By {m.submittedBy?.name || "Unknown Author"}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">{paper.author}</td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-slate-600 bg-slate-50 py-1.5 px-3 rounded-lg w-max mx-auto border border-slate-100">
-                      <Users size={14} className={paper.reviewersAssigned === 0 ? "text-rose-500" : "text-emerald-500"} />
-                      <span className="font-bold">{paper.reviewersAssigned}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-500 font-medium">
-                    {paper.dueDate}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider ${getEditorStatusStyles(paper.status)}`}
-                    >
-                      {paper.status}
+                  <td className="px-6 py-5">
+                    <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">
+                      {m.discipline}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="text-sm px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
-                        Manage
-                      </button>
-                      <button className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors">
-                        <MoreVertical size={18} />
-                      </button>
+                  <td className="px-6 py-5">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="flex -space-x-2">
+                         {[...Array(Math.min(m.assignedReviewers?.length || 0, 3))].map((_, i) => (
+                           <div key={i} className="w-7 h-7 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">
+                             R{i+1}
+                           </div>
+                         ))}
+                      </div>
+                      <span className="text-sm font-black text-slate-700">
+                        {m.assignedReviewers?.length || 0}
+                      </span>
                     </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <StatusBadge status={m.status} />
+                  </td>
+                  <td className="px-8 py-5 text-right">
+                    <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all shadow-sm">
+                      Manage Workflow
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -217,20 +226,44 @@ export default function EditorOverview() {
   );
 }
 
-// ==========================================
-//  HELPER FUNCTIONS
-// ==========================================
-function getEditorStatusStyles(status) {
-  switch (status.toLowerCase()) {
-    case "needs reviewer":
-      return "bg-rose-50 text-rose-700 border border-rose-200";
-    case "awaiting reviews":
-      return "bg-amber-50 text-amber-700 border border-amber-200";
-    case "ready for decision":
-      return "bg-emerald-50 text-emerald-700 border border-emerald-200";
-    case "under review":
-      return "bg-blue-50 text-blue-700 border border-blue-200";
-    default:
-      return "bg-slate-50 text-slate-700 border border-slate-200";
-  }
+// --- Sub-Components for Clean Code ---
+
+function StatCard({ label, value, icon, color }) {
+  const colors = {
+    blue: "text-blue-600 bg-blue-50 border-blue-100",
+    amber: "text-amber-600 bg-amber-50 border-amber-100",
+    rose: "text-rose-600 bg-rose-50 border-rose-100",
+    emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm relative overflow-hidden group">
+      <div className={`absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-500`}>
+        {React.cloneElement(icon, { size: 80 })}
+      </div>
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 border ${colors[color]}`}>
+        {React.cloneElement(icon, { size: 20 })}
+      </div>
+      <h3 className="text-3xl font-black text-slate-900 mb-1">{value}</h3>
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ status }) {
+  const styles = {
+    "Submitted": "bg-slate-100 text-slate-600",
+    "Editor Assigned": "bg-blue-100 text-blue-700",
+    "Under Review": "bg-amber-100 text-amber-700",
+    "Accepted": "bg-emerald-100 text-emerald-700",
+    "Published": "bg-indigo-100 text-indigo-700",
+    "Rejected": "bg-rose-100 text-rose-700",
+    "Revision Required": "bg-purple-100 text-purple-700",
+  };
+
+  return (
+    <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight shadow-sm ${styles[status] || "bg-slate-100 text-slate-600"}`}>
+      {status}
+    </span>
+  );
 }

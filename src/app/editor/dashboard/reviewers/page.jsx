@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   useGetAssignedToEditorQuery,
   useAssignReviewersMutation,
@@ -9,511 +9,290 @@ import { useGetAllReviewersQuery } from "../../../../services/userApi";
 import {
   Users,
   CheckCircle,
-  XCircle,
   AlertCircle,
   UserPlus,
   FileText,
   X,
   MessageSquare,
   Search,
+  ChevronRight,
+  ChevronLeft,
+  FileUp,
+  History,
+  Clock,
+  Filter,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function ReviewersManagement() {
   // --- RTK Query Hooks ---
-  const { data: manuscriptData, isLoading: isLoadingManuscripts } = useGetAssignedToEditorQuery();
+  const { data: manuscriptData, isLoading: isLoadingManuscripts, refetch } = useGetAssignedToEditorQuery();
   const { data: reviewersData, isLoading: isLoadingReviewers } = useGetAllReviewersQuery();
   const [assignReviewers, { isLoading: isAssigning }] = useAssignReviewersMutation();
-  const [updateStatus, { isLoading: isRejecting }] = useUpdateStatusMutation();
+  const [updateStatus, { isLoading: isUpdating }] = useUpdateStatusMutation();
 
   // --- States ---
-  const [activeModal, setActiveModal] = useState(null); // 'assign' | 'reject' | null
+  const [activeModal, setActiveModal] = useState(null); // 'assign' | 'revision' | null
   const [selectedManuscript, setSelectedManuscript] = useState(null);
   const [selectedReviewers, setSelectedReviewers] = useState([]);
-  const [rejectFeedback, setRejectFeedback] = useState("");
+  const [revisionFeedback, setRevisionFeedback] = useState("");
+  const [revisionFile, setRevisionFile] = useState(null);
 
-  // Extract arrays from API response
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
   const manuscripts = manuscriptData?.manuscripts || [];
   const availableReviewers = reviewersData?.data || [];
 
-  //For File fucntionality for rejection by editor states
-  const [rejectFile, setRejectFile] = useState(null);
+  const filteredManuscripts = useMemo(() => {
+    return manuscripts.filter(m =>
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.manuscriptId.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [manuscripts, searchQuery]);
 
-  // --- Modal Handlers ---
+  const totalPages = Math.ceil(filteredManuscripts.length / itemsPerPage);
+  const paginatedManuscripts = filteredManuscripts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const openAssignModal = (manuscript) => {
     setSelectedManuscript(manuscript);
-    setSelectedReviewers([]);
+    setSelectedReviewers(manuscript.assignedReviewers || []);
     setActiveModal("assign");
   };
 
-  const openRejectModal = (manuscript) => {
+  const openRevisionModal = (manuscript) => {
     setSelectedManuscript(manuscript);
-    setRejectFeedback("");
-    setActiveModal("reject");
+    setRevisionFeedback("");
+    setRevisionFile(null);
+    setActiveModal("revision");
   };
 
   const closeModal = () => {
     setActiveModal(null);
     setSelectedManuscript(null);
     setSelectedReviewers([]);
-    setRejectFeedback("");
-    setRejectFile(null);
+    setRevisionFeedback("");
+    setRevisionFile(null);
   };
 
-  // --- Actions ---
   const toggleReviewerSelection = (reviewerId) => {
     if (selectedReviewers.includes(reviewerId)) {
       setSelectedReviewers(selectedReviewers.filter((id) => id !== reviewerId));
     } else {
-      if (selectedReviewers.length < 2) {
-        setSelectedReviewers([...selectedReviewers, reviewerId]);
-      } else {
-        toast.error("You can only select exactly 2 reviewers.");
-      }
+      setSelectedReviewers([...selectedReviewers, reviewerId]);
     }
   };
 
   const handleSubmitAssignment = async () => {
-    if (selectedReviewers.length !== 2) {
-      toast.error("Please select exactly 2 reviewers before assigning.");
+    if (selectedReviewers.length < 2) {
+      toast.error("Please select at least 2 reviewers.");
       return;
     }
-
     try {
-      await assignReviewers({
-        manuscriptId: selectedManuscript._id,
-        reviewerIds: selectedReviewers,
-      }).unwrap();
-
+      await assignReviewers({ manuscriptId: selectedManuscript._id, reviewerIds: selectedReviewers }).unwrap();
       toast.success("Reviewers assigned successfully!");
       closeModal();
+      refetch();
     } catch (error) {
-      console.error("Failed to assign reviewers:", error);
-      toast.error(error?.data?.message || "Something went wrong while assigning.");
+      toast.error(error?.data?.message || "Failed to assign reviewers.");
     }
   };
 
-  const handleRejectManuscript = async () => {
-    if (!rejectFeedback.trim()) {
-      toast.error("Please provide feedback for rejection.");
+  const handleRequestRevision = async () => {
+    if (!revisionFeedback.trim()) {
+      toast.error("Please provide revision instructions.");
       return;
     }
-
     try {
-      // Create FormData for file support
       const formData = new FormData();
       formData.append("manuscriptId", selectedManuscript._id);
-      formData.append("status", "Rejected");
-      formData.append("feedback", rejectFeedback);
-      if (rejectFile) {
-        formData.append("feedbackFile", rejectFile);
-      }
-
-
+      formData.append("status", "Revision Required");
+      formData.append("feedback", revisionFeedback);
+      if (revisionFile) formData.append("feedbackFile", revisionFile);
       await updateStatus(formData).unwrap();
-
-      toast.success("Manuscript rejected and author notified!");
+      toast.success("Revision request sent!");
       closeModal();
+      refetch();
     } catch (error) {
-      console.error("Failed to reject manuscript:", error);
-      toast.error(error?.data?.message || "Failed to reject manuscript.");
+      toast.error(error?.data?.message || "Failed to process revision.");
     }
   };
 
-  // --- Helper: Status Badge Color ---
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Rejected":
-        return "bg-red-50 text-red-700 border-red-200";
-      case "Under Review":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
-      case "Editor Assigned":
-        return "bg-blue-50 text-blue-700 border-blue-200";
-      default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
-    }
+  const getStatusStyle = (status) => {
+    const styles = {
+      "Editor Assigned": "bg-blue-50 text-blue-700 border-blue-100",
+      "Under Review": "bg-indigo-50 text-indigo-700 border-indigo-100",
+      "Revision Required": "bg-amber-50 text-amber-700 border-amber-100",
+      "Submitted": "bg-slate-50 text-slate-700 border-slate-100",
+      "Rejected": "bg-red-50 text-red-700 border-red-100",
+      "Accepted": "bg-emerald-50 text-emerald-700 border-emerald-100",
+    };
+    return styles[status] || "bg-gray-50 text-gray-700 border-gray-100";
   };
 
   if (isLoadingManuscripts) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-        <p className="text-gray-500 font-medium">Loading manuscripts...</p>
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Loading Submissions...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen">
-      {/* Page Header */}
-      <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Users className="w-8 h-8 text-blue-600" />
-            Reviewer Management
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Users className="w-7 h-7 text-blue-600" />
+            Editorial Review Board
           </h1>
-          <p className="text-gray-500 mt-2 text-sm sm:text-base">
-            Manage your assigned manuscripts. Assign reviewers or reject with feedback.
-          </p>
+          <p className="text-slate-500 text-sm mt-1">Manage peer review and manuscript revisions.</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search ID or Title..."
+              className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-64 transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Manuscript Table */}
-      {manuscripts.length === 0 ? (
-        <div className="bg-white p-12 rounded-2xl shadow-sm text-center border border-gray-200 flex flex-col items-center">
-          <div className="bg-gray-50 p-4 rounded-full mb-4">
-            <AlertCircle className="w-10 h-10 text-gray-400" />
+      {/* Main List */}
+      <div className="grid grid-cols-1 gap-4">
+        {paginatedManuscripts.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-20 text-center">
+            <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-slate-900">No manuscripts found</h3>
           </div>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">No Manuscripts Assigned</h3>
-          <p className="text-gray-500 max-w-md">
-            You currently have no manuscripts to manage. New assignments will appear here.
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider">
-                  <th className="px-6 py-4 font-semibold">Manuscript Details</th>
-                  <th className="px-6 py-4 font-semibold">Author</th>
-                  <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {manuscripts.map((manuscript) => (
-                  <tr
-                    key={manuscript._id}
-                    className="hover:bg-gray-50 transition duration-150 group"
-                  >
-                    {/* Details Column */}
-                    <td className="px-6 py-5 align-top">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">
-                          {manuscript.manuscriptId}
-                        </span>
-                        <h3 className="text-sm font-bold text-gray-900 line-clamp-2">
-                          {manuscript.title}
-                        </h3>
-                        <p className="text-xs text-gray-500 line-clamp-1 mt-1">
-                          {manuscript.abstract}
-                        </p>
-                      </div>
-                    </td>
+        ) : (
+          paginatedManuscripts.map((manuscript) => (
+            <div key={manuscript._id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition-all group">
+              <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-600 text-white rounded uppercase">{manuscript.manuscriptId}</span>
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getStatusStyle(manuscript.status)}`}>{manuscript.status}</span>
+                    {manuscript.isRevised && <span className="flex items-center gap-1 text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100"><History className="w-3 h-3" /> Revised</span>}
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">{manuscript.title}</h3>
+                  <div className="flex items-center gap-4 text-xs text-slate-500 mt-2">
+                    <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {new Date(manuscript.createdAt).toLocaleDateString()}</span>
+                    <span className="flex items-center gap-1.5 font-medium text-slate-700 uppercase tracking-tighter bg-slate-100 px-1.5 rounded">{manuscript.manuscriptType}</span>
+                  </div>
+                </div>
 
-                    {/* Author Column */}
-                    <td className="px-6 py-5 align-top whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                          {manuscript.submittedBy?.name?.charAt(0) || "U"}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {manuscript.submittedBy?.name || "Unknown Author"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {manuscript.submittedBy?.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
+                <div className="flex items-center gap-3 lg:border-l lg:pl-6 border-slate-100">
+                  <button onClick={() => openAssignModal(manuscript)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm">
+                    <UserPlus className="w-4 h-4" /> Assign Reviewers
+                  </button>
+                  <button onClick={() => openRevisionModal(manuscript)} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-all">
+                    <MessageSquare className="w-4 h-4 text-amber-500" /> Revision
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
 
-                    {/* Status Column */}
-                    <td className="px-6 py-5 align-top whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusBadge(
-                          manuscript.status
-                        )}`}
-                      >
-                        {manuscript.status}
-                      </span>
-                    </td>
-
-                    {/* Actions Column */}
-                    <td className="px-6 py-5 align-top text-right">
-                      {manuscript.status === "Rejected" ? (
-                        <span className="inline-flex items-center gap-1 text-sm text-red-600 font-medium bg-red-50 px-3 py-1.5 rounded-lg">
-                          <XCircle className="w-4 h-4" /> Rejected
-                        </span>
-                      ) : manuscript.assignedReviewers?.length > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-sm text-green-600 font-medium bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
-                          <CheckCircle className="w-4 h-4" /> Assigned
-                        </span>
-                      ) : (
-                        <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                          {/* Assign Button */}
-                          <button
-                            onClick={() => openAssignModal(manuscript)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white rounded-lg text-sm font-medium transition-colors"
-                            title="Assign Reviewers"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                            <span className="hidden sm:inline">Assign</span>
-                          </button>
-
-                          {/* Reject Button */}
-                          <button
-                            onClick={() => openRejectModal(manuscript)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white rounded-lg text-sm font-medium transition-colors"
-                            title="Reject Manuscript"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            <span className="hidden sm:inline">Reject</span>
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl border border-slate-200">
+          <p className="text-sm text-slate-500">Page <span className="font-bold text-slate-900">{currentPage}</span> of {totalPages}</p>
+          <div className="flex gap-2">
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border border-slate-200 rounded-lg disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border border-slate-200 rounded-lg disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       )}
 
-      {/* --- Assign Reviewers Modal --- */}
+      {/* --- MODALS (Standard Conditional Rendering) --- */}
       {activeModal === "assign" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600" />
-                Assign Reviewers
-              </h3>
-              <button
-                onClick={closeModal}
-                className="text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xl font-bold text-slate-900">Assign Reviewers</h3>
+              <button onClick={closeModal} className="p-2 hover:bg-white rounded-full"><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-
-            <div className="p-6 overflow-y-auto flex-grow bg-gray-50/50">
-              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-6">
-                <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">
-                  Selected Manuscript
-                </p>
-                <p className="text-gray-900 font-semibold">{selectedManuscript?.title}</p>
+            <div className="p-8 overflow-y-auto flex-1 space-y-3">
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-2xl text-sm text-blue-800">
+                <strong>Guideline:</strong> You must select at least 2 reviewers to proceed.
               </div>
-
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-semibold text-gray-800">Available Reviewers</h4>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${selectedReviewers.length === 2
-                    ? "bg-green-100 text-green-700"
-                    : "bg-orange-100 text-orange-700"
-                    }`}
-                >
-                  Selected: {selectedReviewers.length} / 2
-                </span>
+              {availableReviewers.map((reviewer) => {
+                const isSelected = selectedReviewers.includes(reviewer._id);
+                return (
+                  <label key={reviewer._id} className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-600 ring-1 ring-blue-600' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>{reviewer.name.charAt(0)}</div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{reviewer.name}</p>
+                        <p className="text-xs text-slate-500">{reviewer.email}</p>
+                      </div>
+                    </div>
+                    <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-blue-600" checked={isSelected} onChange={() => toggleReviewerSelection(reviewer._id)} />
+                  </label>
+                );
+              })}
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-500">{selectedReviewers.length} Reviewers Selected</span>
+              <div className="flex gap-3">
+                <button onClick={closeModal} className="px-5 py-2.5 text-slate-500 font-bold text-sm">Cancel</button>
+                <button disabled={selectedReviewers.length < 2 || isAssigning} onClick={handleSubmitAssignment} className="px-8 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 transition-all">
+                  {isAssigning ? "Processing..." : "Assign & Notify"}
+                </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {isLoadingReviewers ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : availableReviewers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 bg-white rounded-xl border border-gray-100">
-                  <Search className="w-8 h-8 mx-auto text-gray-300 mb-2" />
-                  <p>No reviewers found in the system.</p>
+      {activeModal === "revision" && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl animate-in fade-in zoom-in duration-200">
+            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-amber-500" /> Request Revision</h3>
+              <button onClick={closeModal} className="p-2 hover:bg-slate-50 rounded-full"><X className="w-5 h-5 text-slate-400" /></button>
+            </div>
+            <div className="p-8 space-y-6">
+              <textarea
+                rows={5}
+                className="w-full border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm bg-slate-50/50"
+                placeholder="Enter detailed feedback for the author..."
+                value={revisionFeedback}
+                onChange={(e) => setRevisionFeedback(e.target.value)}
+              />
+              {!revisionFile ? (
+                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center relative hover:bg-slate-50 transition-all">
+                  <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => setRevisionFile(e.target.files[0])} />
+                  <FileUp className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs text-slate-500 font-medium">Attach annotated manuscript (Optional)</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {availableReviewers.map((reviewer) => {
-                    const isSelected = selectedReviewers.includes(reviewer._id);
-                    const isDisabled = !isSelected && selectedReviewers.length >= 2;
-
-                    return (
-                      <label
-                        key={reviewer._id}
-                        className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all ${isSelected
-                          ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
-                          : isDisabled
-                            ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-200"
-                            : "border-gray-200 hover:border-blue-300 hover:bg-white bg-white shadow-sm"
-                          }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${isSelected
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-600"
-                              }`}
-                          >
-                            {reviewer.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{reviewer.name}</p>
-                            <p className="text-sm text-gray-500">{reviewer.email}</p>
-                          </div>
-                        </div>
-                        <div className="relative flex items-center">
-                          <input
-                            type="checkbox"
-                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
-                            checked={isSelected}
-                            onChange={() => toggleReviewerSelection(reviewer._id)}
-                            disabled={isDisabled}
-                          />
-                        </div>
-                      </label>
-                    );
-                  })}
+                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                  <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-blue-600" /><span className="text-sm font-medium text-slate-700 truncate">{revisionFile.name}</span></div>
+                  <button onClick={() => setRevisionFile(null)}><X className="w-4 h-4 text-slate-400" /></button>
                 </div>
               )}
             </div>
-
-            <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end gap-3">
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 text-gray-700 font-medium hover:bg-gray-100 rounded-xl transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitAssignment}
-                disabled={selectedReviewers.length !== 2 || isAssigning}
-                className={`px-6 py-2.5 text-white font-medium rounded-xl transition-all flex items-center gap-2 shadow-sm ${selectedReviewers.length === 2
-                  ? "bg-blue-600 hover:bg-blue-700 cursor-pointer hover:shadow-md"
-                  : "bg-gray-300 cursor-not-allowed"
-                  }`}
-              >
-                {isAssigning ? "Assigning..." : "Confirm Assignment"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* --- Reject Manuscript Modal --- */}
-      {activeModal === "reject" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          {/* Added max-h-[95vh] and flex-col to the main container */}
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-gray-100 max-h-[90vh]">
-
-            {/* Header - Fixed at top */}
-            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-50 rounded-lg">
-                  <XCircle className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Reject Manuscript</h3>
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-tight">
-                    ID: {selectedManuscript?.manuscriptId}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Body - Scrollable Area */}
-            <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
-              {/* Warning Note */}
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800 leading-relaxed">
-                  Rejecting <span className="font-bold">"{selectedManuscript?.title}"</span>. This action will notify the author via email.
-                </p>
-              </div>
-
-              {/* Feedback Textarea */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                  <MessageSquare className="w-4 h-4 text-blue-500" />
-                  Rejection Feedback <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={4}
-                  className="w-full border border-gray-200 rounded-xl p-4 focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition-all text-sm text-gray-800 resize-none bg-gray-50/50 placeholder:text-gray-400"
-                  placeholder="Write a detailed explanation for the rejection..."
-                  value={rejectFeedback}
-                  onChange={(e) => setRejectFeedback(e.target.value)}
-                ></textarea>
-              </div>
-
-              {/* Improved File Upload */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                  <FileText className="w-4 h-4 text-blue-500" />
-                  Attach Supporting Documents <span className="text-xs font-normal text-gray-400">(Optional)</span>
-                </label>
-
-                {!rejectFile ? (
-                  <div
-                    className="relative border-2 border-dashed border-gray-200 rounded-xl p-8 transition-all hover:border-blue-400 hover:bg-blue-50/30 group cursor-pointer"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setRejectFile(e.dataTransfer.files[0]);
-                    }}
-                  >
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => setRejectFile(e.target.files[0])}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <div className="p-3 bg-white rounded-full shadow-sm border border-gray-100 group-hover:scale-110 transition-transform duration-300">
-                        <Search className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <p className="mt-3 text-sm font-semibold text-gray-700">Click to upload or drag & drop</p>
-                      <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX up to 10MB</p>
-                    </div>
-                  </div>
-                ) : (
-                  /* Selected File Card */
-                  <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in zoom-in-95 duration-200">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white rounded-lg shadow-sm">
-                        <FileText className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div className="max-w-[200px] sm:max-w-xs">
-                        <p className="text-sm font-bold text-gray-900 truncate">{rejectFile.name}</p>
-                        <p className="text-xs text-gray-500">{(rejectFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setRejectFile(null)}
-                      className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Footer - Fixed at bottom */}
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex justify-end gap-3 shrink-0">
-              <button
-                onClick={closeModal}
-                className="px-5 py-2.5 text-gray-600 font-bold text-sm hover:bg-gray-200 rounded-xl transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRejectManuscript}
-                disabled={isRejecting || !rejectFeedback.trim()}
-                className={`px-8 py-2.5 text-white font-bold text-sm rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-red-500/20 ${!rejectFeedback.trim() || isRejecting
-                  ? "bg-red-300 cursor-not-allowed shadow-none"
-                  : "bg-red-600 hover:bg-red-700 active:scale-95"
-                  }`}
-              >
-                {isRejecting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Reject Manuscript"
-                )}
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button onClick={closeModal} className="px-5 py-2.5 text-slate-500 font-bold text-sm">Cancel</button>
+              <button disabled={!revisionFeedback.trim() || isUpdating} onClick={handleRequestRevision} className="px-8 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all">
+                {isUpdating ? "Sending..." : "Request Revision"}
               </button>
             </div>
           </div>

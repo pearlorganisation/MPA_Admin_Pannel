@@ -184,8 +184,11 @@ const AllSubmissions = () => {
                       <p className="text-xs text-gray-500 mt-1 italic">By: {item.submittedBy?.name}</p>
                     </td>
                     <td className="p-5">
-                      <span className={`px-3 py-1 rounded-full text-[11px] font-bold border ${getStatusStyle(item.status)}`}>
-                        {item.status.toUpperCase()}
+                      <span
+                        className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap max-w-[150px] overflow-hidden text-ellipsis leading-none ${getStatusStyle(item.status)}`}
+                        title={item.status}
+                      >
+                        {item.status?.toUpperCase() || "PENDING"}
                       </span>
                     </td>
                     <td className="p-5">

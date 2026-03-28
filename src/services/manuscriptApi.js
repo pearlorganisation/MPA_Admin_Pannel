@@ -45,7 +45,7 @@ export const manuscriptApi = baseApi.injectEndpoints({
                 method: "PUT",
                 body: data,
             }),
-            invalidatesTags: ["Manuscripts","Review"],
+            invalidatesTags: ["Manuscripts", "Review"],
         }),
         getAssignedToEditor: builder.query({
             query: (data) => ({
@@ -64,6 +64,26 @@ export const manuscriptApi = baseApi.injectEndpoints({
             },
             invalidatesTags: ["Manuscripts", "Review"],
         }),
+        editManuscriptAdmin: builder.mutation({
+            query: ({ id, formData }) => ({
+                url: `/manuscripts/admin/edit/${id}`,
+                method: "PUT",
+                body: formData,
+            }),
+            invalidatesTags: ["Manuscripts"],
+        }),
+
+        deleteManuscriptAdmin: builder.mutation({
+            query: (id) => ({
+                url: `/manuscripts/admin/delete/${id}`,
+                method: "DELETE",
+            }),
+            invalidatesTags: ["Manuscripts"],
+        }),
+        getManuscriptById: builder.query({
+            query: (id) => `/manuscripts/${id}`,
+            providesTags: ["Manuscripts"],
+        }),
     }),
 });
 
@@ -76,4 +96,7 @@ export const {
     useAssignReviewersMutation,
     useGetAssignedToEditorQuery,
     useUpdateSubmissionStatusMutation,
+    useEditManuscriptAdminMutation,
+    useDeleteManuscriptAdminMutation,
+    useGetManuscriptByIdQuery,
 } = manuscriptApi;

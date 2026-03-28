@@ -20,20 +20,19 @@ export const SIDEBAR_LINKS = [
   { name: "User Management", href: "/admin/dashboard/users", icon: "Users" },
   { name: "Reviewer Status", href: "/admin/dashboard/review-status", icon: "BookOpen" },
   { name: "Review & Decisions", href: "/admin/dashboard/review-decision", icon: "GitCompare" },
-  { name: "Submission Management", href: "/admin/dashboard/submission-management",icon: "Settings"},
+  { name: "Submission Management", href: "/admin/dashboard/submission-management", icon: "Settings" },
   { name: "Submissions", href: "/admin/dashboard/submissions", icon: "FileText" },
   { name: "Board Management", href: "/admin/dashboard/boards", icon: "ShieldCheck" },
   { name: "Activity Center", href: "/admin/dashboard/activity", icon: "Bell" },
-  { name:"Researcher Management", href: "/admin/dashboard/researcher", icon:"UsersRound"}
+  { name: "Researcher Management", href: "/admin/dashboard/researcher", icon: "UsersRound" }
 ];
 export const EDITOR_SIDEBAR_LINKS = [
   { name: "Editorial Dashboard", href: "/editor/dashboard", icon: "LayoutDashboard" },
   { name: "Assigned Manuscripts", href: "/editor/dashboard/assignments", icon: "Files" },
   { name: "Reviewer Management", href: "/editor/dashboard/reviewers", icon: "Users" },
-  { name: "Peer Review Tracking", href: "/editor/dashboard/reviews", icon: "ClipboardCheck" },
+  { name: "Editor Decision", href: "/editor/dashboard/editor-decision", icon: "ClipboardCheck" },
+  { name: "Reviewer Status", href: "/editor/dashboard/reviewer-status", icon: "UserCheck" },
   { name: "Activity & Notifications", href: "/editor/dashboard/activity", icon: "BellRing" },
-  { name: "Messages / Communication", href: "/editor/dashboard/messages", icon: "Mail" },
-
 ];
 
 export const REVIEWER_SIDEBAR_LINKS = [
