@@ -2,17 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import * as Icons from "lucide-react";
-import { useGetAssignedToEditorQuery } from "../../../../services/manuscriptApi"; 
+import { useGetAssignedToEditorQuery } from "../../../../services/manuscriptApi";
 
 export default function Activity() {
   // Fetch manuscripts assigned to this editor using RTK Query
   const { data, isLoading, isError } = useGetAssignedToEditorQuery();
-  
+
   // State to store which manuscripts have been read
-  const[readItems, setReadItems] = useState([]);
-  
+  const [readItems, setReadItems] = useState([]);
+
   // State to handle the modal (stores the currently selected manuscript)
-  const[selectedManuscript, setSelectedManuscript] = useState(null);
+  const [selectedManuscript, setSelectedManuscript] = useState(null);
 
   // Load read manuscripts from localStorage when the component mounts
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function Activity() {
       const saved = JSON.parse(localStorage.getItem("readManuscripts") || "[]");
       setReadItems(saved);
     }
-  },[]);
+  }, []);
 
   // Function to open modal and mark manuscript as read
   const handleViewDetails = (manuscript) => {
@@ -29,13 +29,13 @@ export default function Activity() {
     // Check if the manuscript is NOT in the read list
     if (!readItems.includes(manuscript._id)) {
       const newReadItems = [...readItems, manuscript._id];
-      
+
       // Update local state
       setReadItems(newReadItems);
-      
+
       // Save to localStorage
       localStorage.setItem("readManuscripts", JSON.stringify(newReadItems));
-      
+
       // IMPORTANT: Dispatch custom event to instantly update the Sidebar badge
       window.dispatchEvent(new Event("manuscriptRead"));
     }
@@ -62,7 +62,7 @@ export default function Activity() {
     );
   }
 
-  const manuscripts = data?.manuscripts ||[];
+  const manuscripts = data?.manuscripts || [];
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -91,11 +91,10 @@ export default function Activity() {
             return (
               <div
                 key={manuscript._id}
-                className={`relative p-5 rounded-2xl border transition-all duration-300 hover:shadow-xl cursor-pointer ${
-                  isRead
-                    ? "bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 opacity-80 hover:opacity-100" // Read styling
-                    : "bg-indigo-50 border-indigo-200 shadow-md dark:bg-indigo-950/20 dark:border-indigo-500/30" // Unread styling
-                }`}
+                className={`relative p-5 rounded-2xl border transition-all duration-300 hover:shadow-xl cursor-pointer ${isRead
+                  ? "bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 opacity-80 hover:opacity-100" // Read styling
+                  : "bg-indigo-50 border-indigo-200 shadow-md dark:bg-indigo-950/20 dark:border-indigo-500/30" // Unread styling
+                  }`}
                 onClick={() => handleViewDetails(manuscript)}
               >
                 {/* "New" Badge for unread items */}
@@ -118,7 +117,7 @@ export default function Activity() {
                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2 line-clamp-2">
                   {manuscript.title}
                 </h3>
-                
+
                 <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 mb-4">
                   <Icons.User size={14} />
                   {manuscript.submittedBy?.name || "Unknown Author"}
@@ -142,7 +141,7 @@ export default function Activity() {
       {/* --- MODAL DESIGN --- */}
       {selectedManuscript && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
-          <div 
+          <div
             className="bg-white dark:bg-slate-950 w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
           >
             {/* Modal Header */}
@@ -160,7 +159,7 @@ export default function Activity() {
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleCloseModal}
                 className="p-2 bg-slate-200 dark:bg-slate-800 hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-500/20 dark:hover:text-rose-400 rounded-full transition-colors"
               >
@@ -170,14 +169,14 @@ export default function Activity() {
 
             {/* Modal Body (Scrollable) */}
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-              
+
               {/* Title & Status */}
               <div>
                 <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3">
                   {selectedManuscript.title}
                 </h3>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 rounded-full text-sm font-semibold">
-                   <Icons.Activity size={16} /> Status: {selectedManuscript.status}
+                  <Icons.Activity size={16} /> Status: {selectedManuscript.status}
                 </span>
               </div>
 
@@ -206,7 +205,7 @@ export default function Activity() {
                   ))}
                 </div>
               </div>
-
+              
               {/* Downloadable Files Section */}
               {selectedManuscript.files && (
                 <div>
@@ -216,12 +215,11 @@ export default function Activity() {
                   <div className="flex flex-wrap gap-3">
                     {/* Loop through the files object and display buttons for available files */}
                     {Object.entries(selectedManuscript.files).map(([key, value]) => {
-                      if (!value) return null; // If file doesn't exist, don't show button
-                      
+                      if (!value) return null;
                       return (
                         <a
                           key={key}
-                          href={`${process.env.NEXT_PUBLIC_API_URL}/${value}`} // Adjust your base URL here
+                          href={value}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium transition-colors border border-slate-200 dark:border-slate-700"
@@ -238,7 +236,7 @@ export default function Activity() {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-end">
-              <button 
+              <button
                 onClick={handleCloseModal}
                 className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-md shadow-indigo-600/20 transition-all"
               >
