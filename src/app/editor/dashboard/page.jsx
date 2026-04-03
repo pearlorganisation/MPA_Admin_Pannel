@@ -1,21 +1,24 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { 
-  ArrowRight, ClipboardList, Clock, CheckCircle2, 
+import {
+  ArrowRight, ClipboardList, Clock, CheckCircle2,
   FileText, Users, Settings2, Search, MoreVertical,
   AlertCircle, BarChart3, PieChart as PieIcon, Loader2
 } from "lucide-react";
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, 
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend 
+import {
+  PieChart, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from "recharts";
-import { useGetAssignedToEditorQuery } from "../../../services/manuscriptApi"; 
-
+import { useGetAssignedToEditorQuery } from "../../../services/manuscriptApi";
+import { useRouter } from "next/navigation";
 // --- UI Constants ---
 const COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#94a3b8"];
 
 export default function EditorOverview() {
+
+  const router = useRouter();
+
   // 1. Fetch Real Data from RTK Query
   const { data, isLoading, isError, refetch } = useGetAssignedToEditorQuery();
   const manuscripts = data?.manuscripts || [];
@@ -69,7 +72,7 @@ export default function EditorOverview() {
 
   return (
     <div className="p-4 md:p-8 space-y-10 animate-in fade-in duration-700">
-      
+
       {/* --- Header --- */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -80,7 +83,7 @@ export default function EditorOverview() {
           </div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">Editorial Control</h1>
           <p className="text-slate-500 mt-2 text-sm max-w-xl">
-            Real-time tracking of <span className="text-blue-600 font-bold">{stats.total} assignments</span>. 
+            Real-time tracking of <span className="text-blue-600 font-bold">{stats.total} assignments</span>.
             Monitor peer-review progress and manage publication workflows.
           </p>
         </div>
@@ -120,7 +123,7 @@ export default function EditorOverview() {
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend verticalAlign="bottom" height={36}/>
+                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -137,7 +140,7 @@ export default function EditorOverview() {
               <BarChart data={stats.barData}>
                 <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
                 <YAxis fontSize={10} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{fill: '#f8fafc'}} />
+                <Tooltip cursor={{ fill: '#f8fafc' }} />
                 <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={30} />
               </BarChart>
             </ResponsiveContainer>
@@ -154,9 +157,9 @@ export default function EditorOverview() {
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Filter by ID or Title..." 
+            <input
+              type="text"
+              placeholder="Filter by ID or Title..."
               className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none w-64 transition-all"
             />
           </div>
@@ -197,11 +200,11 @@ export default function EditorOverview() {
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-center gap-2">
                       <div className="flex -space-x-2">
-                         {[...Array(Math.min(m.assignedReviewers?.length || 0, 3))].map((_, i) => (
-                           <div key={i} className="w-7 h-7 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">
-                             R{i+1}
-                           </div>
-                         ))}
+                        {[...Array(Math.min(m.assignedReviewers?.length || 0, 3))].map((_, i) => (
+                          <div key={i} className="w-7 h-7 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">
+                            R{i + 1}
+                          </div>
+                        ))}
                       </div>
                       <span className="text-sm font-black text-slate-700">
                         {m.assignedReviewers?.length || 0}
@@ -212,7 +215,10 @@ export default function EditorOverview() {
                     <StatusBadge status={m.status} />
                   </td>
                   <td className="px-8 py-5 text-right">
-                    <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all shadow-sm">
+
+                    <button onClick={() => {
+                      router.push("dashboard/editor-decision");
+                    }} className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all shadow-sm">
                       Manage Workflow
                     </button>
                   </td>

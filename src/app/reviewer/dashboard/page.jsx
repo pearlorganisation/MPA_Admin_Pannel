@@ -15,8 +15,11 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid
 } from "recharts";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export default function ReviewerDashboard() {
+
+  const router = useRouter();
   // 1. Fetch data from your API logic (Restored exactly as before)
   const { data, isLoading } = useGetReviewerAssignmentsQuery();
   const [respondToInvite] = useRespondToInvitationMutation();
@@ -227,9 +230,6 @@ export default function ReviewerDashboard() {
       <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-md font-bold text-slate-800">Active & Historical Records</h3>
-          <button className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:underline">
-            View Full Logs <ArrowUpRight size={14} />
-          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -266,6 +266,7 @@ export default function ReviewerDashboard() {
                   </td>
                   <td className="px-6 py-5 text-right">
                     <button
+                      onClick={() => router.push("/reviewer/dashboard/papers")}
                       disabled={r.reviewStatus === "Completed" || r.invitationStatus === "Declined"}
                       className={`p-2 rounded-lg transition-all ${r.reviewStatus === "Completed" || r.invitationStatus === "Declined"
                           ? "text-slate-300 cursor-not-allowed"
