@@ -344,17 +344,71 @@ export default function SubmissionManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Object.entries(selectedManuscript.files || {}).map(([key, url]) => {
                     if (!url) return null;
-                    return (
-                      <div key={key} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 group hover:border-indigo-300 transition">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><DownloadIcon /></div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-700 capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                            <p className="text-[10px] text-slate-400">Ready to download</p>
+
+                   
+                    if (Array.isArray(url)) {
+                      return (
+                        <div key={key} className="col-span-full">
+                          <h3 className="text-sm font-bold text-slate-700 mb-3 capitalize">
+                            {key}
+                          </h3>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {url.map((img, index) => {
+                              const clean = img
+                                .replace(".webp.webp", ".webp")
+                                .replace(".jpeg.jpg", ".jpg");
+
+                              return (
+                                <div
+                                  key={index}
+                                  className="group relative rounded-xl overflow-hidden border shadow-sm"
+                                >
+                                  {/* IMAGE */}
+                                  <img
+                                    src={clean}
+                                    className="w-full h-32 object-cover cursor-pointer group-hover:scale-105 transition"
+                                    onClick={() => window.open(clean, "_blank")}
+                                  />
+
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex justify-center items-center gap-3 transition">
+                                    <a
+                                      href={clean}
+                                      target="_blank"
+                                      className="bg-white p-2 rounded-full"
+                                    >
+                                      👁
+                                    </a>
+
+                                    <a
+                                      href={clean}
+                                      download
+                                      className="bg-white p-2 rounded-full"
+                                    >
+                                      ⬇
+                                    </a>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                        <a href={url} target="_blank" rel="noreferrer" className="bg-white p-2 rounded-lg border border-slate-200 shadow-sm hover:bg-indigo-600 hover:text-white transition">
-                          <EyeIcon />
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border"
+                      >
+                        <span className="text-sm font-medium capitalize">{key}</span>
+
+                        <a
+                          href={url}
+                          target="_blank"
+                          className="p-2 bg-white border rounded-lg"
+                        >
+                          👁
                         </a>
                       </div>
                     );
