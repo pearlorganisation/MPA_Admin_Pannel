@@ -10,7 +10,8 @@ import { useGetAllEditorsQuery, useGetAllReviewersQuery } from "../../../../serv
 import {
   FileText, UserCheck, Users, XCircle,
   ChevronLeft, ChevronRight, ExternalLink,
-  MoreHorizontal, Loader2, MessageSquare, AlertCircle, Edit, Check, Upload
+  MoreHorizontal, MessageSquare, AlertCircle, Edit, Check, Upload,
+  Loader2
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 

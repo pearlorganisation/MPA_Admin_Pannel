@@ -9,7 +9,8 @@ import {
   useGetAdminReviewTrackingQuery,
   useGetEligibleReviewersQuery
 } from "../../../../services/reviewerApi";
-import * as Icons from "lucide-react";
+import { Loader2 } from "lucide-react";
+import * as Icons from "lucide-react";  
 import toast from "react-hot-toast";
 
 export default function EditorDecisionDashboard() {
@@ -80,7 +81,7 @@ export default function EditorDecisionDashboard() {
 
   if (loadingAssignments) return (
     <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-      <Icons.Loader2 className="animate-spin text-indigo-600" size={40} />
+      <Loader2 className="animate-spin text-indigo-600" size={40} />
       <p className="text-slate-500 font-medium">Loading Editorial Dashboard...</p>
     </div>
   );

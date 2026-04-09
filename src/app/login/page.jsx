@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLoginMutation } from "../../services/authApi";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail, Loader2, ShieldCheck, BookOpen } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ShieldCheck, BookOpen, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function Login() {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useGetAdminReviewTrackingQuery, useGetEligibleReviewersQuery } from "../../../../services/reviewerApi";
 import { useUpdateSubmissionStatusMutation, useAssignReviewersMutation } from "../../../../services/manuscriptApi";
 import * as Icons from "lucide-react";
+import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AdminReviewTracking() {
@@ -47,7 +48,7 @@ export default function AdminReviewTracking() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500">
-        <Icons.Loader2 className="animate-spin mb-4 text-blue-500" size={40} />
+        <Loader2 className="animate-spin mb-4 text-blue-500" size={40} />
         <p className="font-medium text-lg">Loading Review Details...</p>
       </div>
     );

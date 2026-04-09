@@ -9,9 +9,10 @@ import {
   ExternalLink, 
   Mail, 
   Linkedin,
-  Loader2,
+  
   AlertTriangle,
-  Users
+  Users,
+  Loader2
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 

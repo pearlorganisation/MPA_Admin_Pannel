@@ -6,7 +6,8 @@ import {
 } from "../../../../services/enquiryApi";
 import {
     Eye, Trash2, X, ChevronLeft, ChevronRight, Mail,
-    MessageSquare, Clock, AlertCircle, Loader2, Reply, AlertTriangle
+    MessageSquare, Clock, AlertCircle, Reply, AlertTriangle,
+    Loader2
 } from 'lucide-react';
 
 export default function AdminEnquiry() {

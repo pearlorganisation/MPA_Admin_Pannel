@@ -7,7 +7,7 @@ import {
   Clock, 
   Users, 
   MoreHorizontal,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer,

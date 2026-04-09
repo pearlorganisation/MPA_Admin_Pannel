@@ -13,13 +13,14 @@ import {
   UserCheck,
   Mail,
   Shield,
-  Loader2,
+  
   Search,
   AlertTriangle,
   RefreshCw,
   X,
   CheckCircle2,
-  Trash2 // Added Trash icon
+  Trash2, 
+  Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
