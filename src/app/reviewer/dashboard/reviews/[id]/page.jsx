@@ -107,7 +107,7 @@ export default function SubmitReviewPage() {
             </div>
 
             <div className="flex gap-2">
-              {manuscript?.files?.manuscriptFile && (
+              {manuscript?.files?.manuscriptFile?.url && (
                 <a
                   href={manuscript.files.manuscriptFile}
                   target="_blank"

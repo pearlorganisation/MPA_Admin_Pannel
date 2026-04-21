@@ -228,10 +228,10 @@ export default function SubmissionManagement() {
                       <div className="flex flex-col items-center gap-1">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-bold ${sub.plagiarismScore > 40
-                              ? "bg-red-100 text-red-600"
-                              : sub.plagiarismScore > 20
-                                ? "bg-yellow-100 text-yellow-600"
-                                : "bg-green-100 text-green-600"
+                            ? "bg-red-100 text-red-600"
+                            : sub.plagiarismScore > 20
+                              ? "bg-yellow-100 text-yellow-600"
+                              : "bg-green-100 text-green-600"
                             }`}
                         >
                           {sub.plagiarismScore}%
@@ -241,10 +241,10 @@ export default function SubmissionManagement() {
                         <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                           <div
                             className={`h-full ${sub.plagiarismScore > 40
-                                ? "bg-red-500"
-                                : sub.plagiarismScore > 20
-                                  ? "bg-yellow-500"
-                                  : "bg-green-500"
+                              ? "bg-red-500"
+                              : sub.plagiarismScore > 20
+                                ? "bg-yellow-500"
+                                : "bg-green-500"
                               }`}
                             style={{ width: `${sub.plagiarismScore}%` }}
                           />
@@ -376,51 +376,28 @@ export default function SubmissionManagement() {
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Manuscript Documents</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(selectedManuscript.files || {}).map(([key, url]) => {
-                    if (!url) return null;
+                  {Object.entries(selectedManuscript.files || {}).map(([key, fileData]) => {
+                    if (!fileData) return null;
 
-
-                    if (Array.isArray(url)) {
+                    if (Array.isArray(fileData)) {
                       return (
                         <div key={key} className="col-span-full">
-                          <h3 className="text-sm font-bold text-slate-700 mb-3 capitalize">
-                            {key}
-                          </h3>
-
+                          <h3 className="text-sm font-bold text-slate-700 mb-3 capitalize">{key}</h3>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {url.map((img, index) => {
-                              const clean = img
-                                .replace(".webp.webp", ".webp")
-                                .replace(".jpeg.jpg", ".jpg");
+                            {fileData.map((imgObj, index) => {
+                              const currentUrl = imgObj.url || "";
+                              const clean = currentUrl.replace(".webp.webp", ".webp").replace(".jpeg.jpg", ".jpg");
 
                               return (
-                                <div
-                                  key={index}
-                                  className="group relative rounded-xl overflow-hidden border shadow-sm"
-                                >
-                                  {/* IMAGE */}
+                                <div key={index} className="group relative rounded-xl overflow-hidden border shadow-sm">
                                   <img
                                     src={clean}
                                     className="w-full h-32 object-cover cursor-pointer group-hover:scale-105 transition"
                                     onClick={() => window.open(clean, "_blank")}
                                   />
-
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex justify-center items-center gap-3 transition">
-                                    <a
-                                      href={clean}
-                                      target="_blank"
-                                      className="bg-white p-2 rounded-full"
-                                    >
-                                      👁
-                                    </a>
-
-                                    <a
-                                      href={clean}
-                                      download
-                                      className="bg-white p-2 rounded-full"
-                                    >
-                                      ⬇
-                                    </a>
+                                    <a href={clean} target="_blank" className="bg-white p-2 rounded-full">👁</a>
+                                    <a href={clean} download className="bg-white p-2 rounded-full">⬇</a>
                                   </div>
                                 </div>
                               );
@@ -429,20 +406,14 @@ export default function SubmissionManagement() {
                         </div>
                       );
                     }
+                    const finalUrl = fileData?.url || fileData;
+                    if (typeof finalUrl !== 'string') return null;
 
                     return (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border"
-                      >
-                        <span className="text-sm font-medium capitalize">{key}</span>
-
-                        <a
-                          href={url}
-                          target="_blank"
-                          className="p-2 bg-white border rounded-lg"
-                        >
-                          👁
+                      <div key={key} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border">
+                        <span className="text-sm font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                        <a href={finalUrl} target="_blank" className="p-2 bg-white border rounded-lg hover:text-indigo-600 transition">
+                          👁 View File
                         </a>
                       </div>
                     );

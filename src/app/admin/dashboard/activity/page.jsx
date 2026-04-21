@@ -202,7 +202,7 @@ const ActivityCenter = () => {
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex gap-3">
-              <a href={selectedSubmission.files?.manuscriptFile} target="_blank" className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-200">
+              <a href={selectedSubmission.files?.manuscriptFile?.url} target="_blank" className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-200">
                 <ExternalLink size={18} /> Open Main Manuscript
               </a>
               <button onClick={() => setSelectedSubmission(null)} className="px-6 py-3 border border-slate-200 font-bold text-slate-600 rounded-xl hover:bg-slate-100 transition-all bg-white">Close</button>
