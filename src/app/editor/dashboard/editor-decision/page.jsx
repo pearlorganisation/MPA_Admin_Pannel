@@ -208,10 +208,10 @@ export default function EditorDecisionDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <a href={selectedPaper.files.manuscriptFile} target="_blank" className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 flex items-center gap-2">
+                      <a href={selectedPaper.files.manuscriptFile?.url} target="_blank" className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 flex items-center gap-2">
                         <Icons.FileDown size={14} /> Revised MS
                       </a>
-                      <a href={selectedPaper.files.reviewChecklist} target="_blank" className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-700 flex items-center gap-2">
+                      <a href={selectedPaper.files.reviewChecklist?.url} target="_blank" className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-700 flex items-center gap-2">
                         <Icons.Eye size={14} /> Checklist
                       </a>
                     </div>

@@ -555,21 +555,35 @@ export default function SubmissionManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
                   {["manuscriptFile", "coverLetter", "ethicalDeclaration", "aiReport", "figures", "tables"].map((fileKey) => (
                     <div key={fileKey} className="p-5 border border-slate-200 rounded-2xl bg-white shadow-sm">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-3">{fileKey.replace(/([A-Z])/g, ' $1')}</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-3">
+                        {fileKey.replace(/([A-Z])/g, ' $1')}
+                      </label>
+
                       <div className="text-[10px] mb-3 p-2 bg-indigo-50 text-indigo-700 rounded-lg font-medium overflow-hidden truncate">
                         {(() => {
-                          const file = selectedManuscript.files?.[fileKey];
+                          const fileData = selectedManuscript.files?.[fileKey];
 
-                          if (!file) return "No file uploaded";
+                          if (!fileData) return "No file uploaded";
 
-                          if (Array.isArray(file)) {
-                            return `${file.length} files uploaded`;
+                          // Agar array hai (jaise Figures)
+                          if (Array.isArray(fileData)) {
+                            return `${fileData.length} files uploaded`;
                           }
 
-                          return "Current: " + file.split("/").pop();
+                          // Agar object hai {url, publicId}, toh .url use karo, warna directly string use karo
+                          const fileUrl = typeof fileData === 'object' ? fileData.url : fileData;
+
+                          if (!fileUrl || typeof fileUrl !== 'string') return "No file path found";
+
+                          return "Current: " + fileUrl.split("/").pop();
                         })()}
                       </div>
-                      <input type="file" onChange={e => setNewFiles({ ...newFiles, [fileKey]: e.target.files[0] })} className="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer" />
+
+                      <input
+                        type="file"
+                        onChange={e => setNewFiles({ ...newFiles, [fileKey]: e.target.files[0] })}
+                        className="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer"
+                      />
                     </div>
                   ))}
                 </div>

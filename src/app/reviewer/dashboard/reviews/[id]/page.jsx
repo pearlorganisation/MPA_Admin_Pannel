@@ -109,7 +109,7 @@ export default function SubmitReviewPage() {
             <div className="flex gap-2">
               {manuscript?.files?.manuscriptFile?.url && (
                 <a
-                  href={manuscript.files.manuscriptFile}
+                  href={manuscript.files.manuscriptFile?.url}
                   target="_blank"
                   className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold"
                 >
@@ -118,7 +118,7 @@ export default function SubmitReviewPage() {
               )}
 
               <a
-                href={manuscript.files.reviewChecklist}
+                href={manuscript.files.reviewChecklist?.url}
                 target="_blank"
                 className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold"
               >

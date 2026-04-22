@@ -342,7 +342,7 @@ export default function ReviewersManagement() {
                     return (
                       <a 
                         key={key} 
-                        href={url} 
+                        href={url?.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-sm transition-all group bg-white"
